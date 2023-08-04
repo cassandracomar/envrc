@@ -362,10 +362,11 @@ the exit code, stdout and stderr of the process."
     (let* ((default-directory env-dir))
       (envrc--make-process-with-global-env
        '("direnv" "reload")
-       (lambda (exit-code) (if (zerop exit-code)
-                          (envrc--update-env env-dir)
-                        (display-buffer "*envrc-reload*")
-                        (user-error "Error running direnv reload")))))))
+       (lambda (exit-code stdout stderr)
+         (if (zerop exit-code)
+             (envrc--update-env env-dir)
+           (display-buffer "*envrc-reload*")
+           (user-error "Error running direnv reload")))))))
 
 (defun envrc-allow ()
   "Run \"direnv allow\" in the current env."
