@@ -107,6 +107,15 @@ Experienced users can set this to a nil value and then include the
   :group 'envrc
   :type 'boolean)
 
+(defcustom envrc-disable-in-minibuffer nil
+  "Whether or not to load environments in the minibuffer.
+
+A non-nil value will prevent the envrionment from propagating into the
+minibuffer.  Note that `completing-read' will not provide completion
+using the new environment."
+  :group 'envrc
+  :type 'boolean)
+
 (defcustom envrc-direnv-executable "direnv"
   "The direnv executable used by envrc."
   :type 'string)
@@ -174,8 +183,8 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
       (progn
         (when envrc-add-to-mode-line-misc-info
           (setq envrc--used-mode-line-construct envrc-indicator)
-           ;; NOTE since this is a minor mode, `mode-line-misc-info' needs to be
-           ;; controlled locally.
+          ;; NOTE since this is a minor mode, `mode-line-misc-info' needs to be
+          ;; controlled locally.
           (make-local-variable 'mode-line-misc-info)
           (add-to-list 'mode-line-misc-info envrc-indicator))
         (envrc--update)
@@ -190,7 +199,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
   (lambda ()
     (when
         (cond
-         ((minibufferp) nil)
+         ((and (minibufferp) envrc-disable-in-minibuffer) nil)
          ((file-remote-p default-directory)
           (and envrc-remote
                (seq-contains-p
@@ -349,8 +358,8 @@ called `cd'"
         (deny-path (concat (or (getenv "XDG_DATA_HOME")
                                (concat (getenv "HOME") "/.local/share"))
                            "/direnv/deny")))
-      (locate-file deny-hash
-                   (list deny-path))))
+    (locate-file deny-hash
+                 (list deny-path))))
 
 (defun envrc--cache-key (env-dir process-env)
   "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV.
@@ -835,7 +844,12 @@ Shortcuts tramp caching direnv sets the exec-path."
     (or envrc--remote-path
         (apply fn vec nil))))
 
-(advice-add 'shell-command :around #'envrc-propagate-environment)
+;; NOTE: since this function is meant to be invoked by `completing-read',
+;; `envrc-mode' must be enabled in the minibuffer. This can be configured by
+;; setting `envrc-disable-in-minibuffer' to nil.
+(advice-add 'Man-completion-table :around #'envrc-propagate-environment)
+(advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
+(advice-add 'async-shell-command :around #'envrc-propagate-environment)
 (advice-add 'org-babel-eval :around #'envrc-propagate-environment)
 (advice-add 'org-export-file :around #'envrc-propagate-environment)
 (advice-add 'tramp-get-connection-buffer :filter-return #'envrc-propagate-tramp-environment)
