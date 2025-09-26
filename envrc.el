@@ -594,8 +594,9 @@ variable names and values."
       (delete-file stderr-file))
     result))
 
-;; Forward declaration for the byte compiler
+;; Forward declarations for the byte compiler
 (defvar eshell-path-env)
+(defvar Info-directory-list)
 
 (defun envrc--merged-environment (process-env pairs)
   "Make a `process-environment' value that merges PROCESS-ENV with PAIRS.
@@ -616,7 +617,7 @@ also appear in PAIRS."
   (with-current-buffer buf
     (kill-local-variable 'exec-path)
     (kill-local-variable 'process-environment)
-    (kill-local-variable 'info-directory-list)
+    (kill-local-variable 'Info-directory-list)
     (when (derived-mode-p 'eshell-mode)
       (if (fboundp 'eshell-set-path)
           (eshell-set-path (butlast exec-path))
@@ -654,8 +655,10 @@ also appear in PAIRS."
             (setq-local eshell-path-env path)))
         (when-let* ((info-path (getenv-internal "INFOPATH" env)))
           (setq-local Info-directory-list
-                      (seq-filter #'identity (parse-colon-path info-path))))
-        (when-let ((man-path (getenv-internal "MANPATH" env)))
+                      (append (seq-filter #'identity (parse-colon-path info-path))
+                              (when (boundp 'Info-directory-list)
+                                (default-value 'Info-directory-list)))))
+        (when-let* ((man-path (getenv-internal "MANPATH" env)))
           (setq-local woman-expanded-directory-path nil
                       woman-manpath
                       (seq-filter #'identity (parse-colon-path man-path))))))))
